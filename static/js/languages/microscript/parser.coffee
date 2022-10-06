@@ -6,7 +6,7 @@ class @Parser
     @current =
       line: 1
       column: 1
-    @verbose = false
+    @verbose = true
     @nesting = 0
     @not_terminated = []
 

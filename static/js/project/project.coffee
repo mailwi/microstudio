@@ -76,6 +76,7 @@ class @Project
       project: @app.project.id
       folder: folder
     },(msg)=>
+      console.log("update file list: ", folder, msg.files)
       @[callback] msg.files
 
   updateSourceList:()-> @updateFileList "ms","setSourceList"
@@ -459,6 +460,9 @@ class @Project
   savePendingChanges:(callback)->
     if @pending_changes.length>0
       save = @pending_changes.splice(0,1)[0]
+
+      console.log("SAVE: ", save)
+
       save.forceSave ()=>
         @savePendingChanges(callback)
     else

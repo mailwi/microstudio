@@ -240,6 +240,15 @@ class @RunWindow
     ),3000
 
     src = @app.editor.editor.getValue()
+
+    if file.indexOf("_microlua") != -1
+      # console.log("Update before: ", file, src)
+
+      file = file.replace("_microlua", "")
+      src = @app.editor.microluaToMicroscript(src)[0]
+
+      # console.log("Update: ", file, src)
+
     iframe = document.getElementById("runiframe")
     if iframe?
       iframe.contentWindow.postMessage JSON.stringify({

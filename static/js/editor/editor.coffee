@@ -17,7 +17,10 @@ class @Editor extends Manager
     @editor = ace.edit "editor-view"
     @editor.$blockScrolling = Infinity
     @editor.setTheme("ace/theme/tomorrow_night_bright")
-    @editor.getSession().setMode(@language.ace_mode)
+    #@editor.setTheme("ace/theme/textmate")
+
+    @editor.getSession().setMode("ace/mode/lua")
+      
     @editor.setFontSize("14px")
     @editor.getSession().setOptions
       tabSize: 2
@@ -156,7 +159,7 @@ class @Editor extends Manager
         else
           @language = @app.languages.microscript
 
-    @editor.getSession().setMode(@language.ace_mode)
+    @editor.getSession().setMode("ace/mode/lua")
     @updateSourceLanguage()
 
   checkEmbeddedJavaScript:(src)->
@@ -168,7 +171,7 @@ class @Editor extends Manager
       else
         if @language != @app.languages.microscript2
           @language = @app.languages.microscript2
-          @editor.getSession().setMode(@language.ace_mode)
+          @editor.getSession().setMode("ace/mode/lua")
 
   editorContentsChanged:()->
     return if @ignore_changes
@@ -188,12 +191,19 @@ class @Editor extends Manager
   check:()->
     if @update_time>0 and (@value_tool or Date.now()>@update_time+@update_delay)
       @update_time = 0
-      if @language.parser
-        parser = new @language.parser(@editor.getValue())
-        p = parser.parse()
-        if not parser.error_info?
+
+      console.log("Update check file: " + @selected_source)
+
+      if @selected_source.indexOf("_microlua") == -1
+        if @language.parser
+          parser = new @language.parser(@editor.getValue())
+          p = parser.parse()
+          if not parser.error_info?
+            @app.runwindow.updateCode(@selected_source+".ms",@getCode())
+        else
           @app.runwindow.updateCode(@selected_source+".ms",@getCode())
       else
+        console.log("Update microlua code: " + @selected_source)
         @app.runwindow.updateCode(@selected_source+".ms",@getCode())
 
   getCurrentLine:()->
@@ -209,6 +219,35 @@ class @Editor extends Manager
   forceSave:(callback)->
     @checkSave(true,callback)
 
+  microluaToMicroscript:(code)->
+    convertedCode = ""
+
+    lines = code.split "\n"
+
+    space_re = /\s+/
+    
+    for line in lines
+      tokens = line.split(space_re)
+
+      if tokens[0] == "" then tokens.shift()
+      if tokens[tokens.length - 1] == "" then tokens.pop()
+
+      if tokens.length > 0
+        i = 0
+        while i < tokens.length
+          if tokens[i] == "function"
+            i++
+            function_name = tokens[i].split("(")[0]
+            convertedCode += function_name + " = function(" + line.split("(")[1] + "\n"
+            break
+          else
+            convertedCode += tokens.join(" ") + "\n"
+            break
+      else
+        convertedCode += "\n"
+
+    return [convertedCode, convertedCode.split("\n").length]
+
   saveCode:(callback)->
     source = @app.project.getSource(@selected_source)
     saved = false
@@ -217,13 +256,32 @@ class @Editor extends Manager
     @keydown_count = 0
     @lines_of_code = 0
 
+    code = @getCode()
+
+    if @selected_source.indexOf("_microlua") != -1
+      codeAndLines = @microluaToMicroscript(code)
+
+      @app.client.sendRequest {
+        name: "write_project_file"
+        project: @app.project.id
+        file: "ms/#{@selected_source.split('_microlua')[0]}.ms"
+        characters: keycount
+        lines: codeAndLines[1]
+        content: codeAndLines[0]
+      },(msg)=>
+        saved = true
+        @app.project.removePendingChange(@) if @save_time == 0
+        if source
+          source.size = msg.size
+        callback() if callback?
+
     @app.client.sendRequest {
       name: "write_project_file"
       project: @app.project.id
       file: "ms/#{@selected_source}.ms"
       characters: keycount
       lines: lines
-      content: @getCode()
+      content: code
     },(msg)=>
       saved = true
       @app.project.removePendingChange(@) if @save_time == 0
@@ -661,7 +719,7 @@ class @Editor extends Manager
     @app.client.sendRequest {
       name: "write_project_file"
       project: @app.project.id
-      file: "ms/#{name}.ms"
+      file: "ms/#{name}_microlua.ms"
       properties: {}
       content: content
     },(msg)=>

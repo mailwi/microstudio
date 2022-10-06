@@ -40,6 +40,9 @@ class @Runtime
     @audio.cancelBeeps()
     @screen.clear()
 
+    if file.indexOf("_microlua") != -1
+      return
+
     try
       @vm.run(src,3000,file)
 

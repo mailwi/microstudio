@@ -277,6 +277,14 @@ class @WebApp
             manager.listFiles "sounds",(sounds)=>
               manager.listFiles "music",(music)=>
                 manager.listFiles "assets",(assets)=>
+                  filterSources = []
+
+                  for source in sources
+                    if source.file.indexOf("_microlua") == -1
+                      filterSources.push source
+                      
+                  sources = filterSources
+
                   resources = JSON.stringify
                     sources: sources
                     images: sprites

@@ -275,6 +275,7 @@ class @FolderView
       @createItemFolder(f,content)
 
     for f in folder.files
+      # if not f.file or f.file.indexOf("_microlua") != -1 or f.ext != "ms"
       element.appendChild @createItemBox f
     return
 

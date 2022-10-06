@@ -25,6 +25,9 @@ class @Runtime
     return false if src == @update_memory[file]
     @update_memory[file] = src
 
+    if file.indexOf("_microlua") != -1
+      return
+
     try
       @vm.run(src,3000,file)
 
